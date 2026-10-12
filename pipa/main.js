@@ -4,6 +4,7 @@ import WebGPU from '../lib/webgpu.js';
 import { 
     createIdentityMat4, 
     createLookAtMat4,
+    createOrthographicMat4,
     createTranslationMat4, 
     createRotationZMat4, 
     multiplyMat4 
@@ -136,33 +137,44 @@ class Scene {
     createViewMatrix() {
         this.cameraPos = 0.1 * Math.sin(this.angle);
 
-        const eye = [0, this.cameraPos, 0.0];
-        const at = [0, this.cameraPos, 0.5];
+        const eye = [0, this.cameraPos, 2];
+        const at = [0, this.cameraPos, 0];
         const up = [0, 1, 0];
 
-        return createLookAtMat4(eye, at, up);
+        return createLookAtMat4(eye, at, up, true);
+    }
+
+    createProjectionMatrix(gpu) {
+        const aspect = gpu.canvas.width / gpu.canvas.height;
+
+        return createOrthographicMat4(-aspect, aspect, -1, 1, 0.1, 10);
     }
 
     draw(gpu) {
         const model = this.createModelMatrix();
         const view = this.createViewMatrix();
+        const projection = this.createProjectionMatrix(gpu);
 
         const modelFita1 = this.createModelMatrixFita1(model);
         const modelFita2 = this.createModelMatrixFita2(modelFita1);
 
+        const modelView = multiplyMat4(view, model);
+        const modelViewFita1 = multiplyMat4(view, modelFita1);
+        const modelViewFita2 = multiplyMat4(view, modelFita2);
+
         
         // Renderiza a Pipa
-        this.uniformPipa.data.set(multiplyMat4(view, model));
+        this.uniformPipa.data.set(multiplyMat4(projection, modelView));
         gpu.writeBuffer(this.uniformPipa.buffer, this.uniformPipa.data);
         gpu.draw(this.program, this.pipa, [this.uniformPipa.bindGroup]);
 
         // Renderiza a Fita 1
-        this.uniformFita1.data.set(multiplyMat4(view, modelFita1));
+        this.uniformFita1.data.set(multiplyMat4(projection, modelViewFita1));
         gpu.writeBuffer(this.uniformFita1.buffer, this.uniformFita1.data);
         gpu.draw(this.program, this.fita1, [this.uniformFita1.bindGroup]);
 
         // Renderiza a Fita 2
-        this.uniformFita2.data.set(multiplyMat4(view, modelFita2));
+        this.uniformFita2.data.set(multiplyMat4(projection, modelViewFita2));
         gpu.writeBuffer(this.uniformFita2.buffer, this.uniformFita2.data);
         gpu.draw(this.program, this.fita2, [this.uniformFita2.bindGroup]);
     }
