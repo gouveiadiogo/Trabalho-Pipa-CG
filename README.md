@@ -30,3 +30,27 @@ e acessar `http://localhost:8000/pipa/main.html`.
 
 Usar Chrome ou Edge atualizado (precisa de suporte a WebGPU).
 
+## Relatório
+
+### Modelagem e animação
+
+A cena usa quatro triângulos. Dois formam o corpo da pipa, um vermelho e outro amarelo, e os outros dois formam as fitas laranjas da cauda. O fundo azul é definido pela cor de limpeza do canvas.
+
+O movimento vertical da pipa usa `0.2 * Math.sin(this.angle)`. A rotação também varia com uma função seno, com amplitude de `0.12` radianos. A matriz de modelagem combina a rotação com a translação vertical.
+
+Cada fita gira em torno do ponto onde está presa. A primeira recebe a transformação da pipa, e a segunda recebe a transformação da primeira. As rotações têm amplitudes e frequências diferentes, fazendo as fitas balançarem sem perder a ligação com o restante da pipa. Os uniform buffers são atualizados a cada quadro, e a animação continua com `requestAnimationFrame`.
+
+### Câmera
+
+A câmera foi implementada com base no exemplo da pasta `06 - camera` do [repositório da disciplina](https://github.com/mlage/curso-cg/tree/main/06%20-%20camera). O método `createViewMatrix` usa `createLookAtMat4` para calcular a matriz de visão a partir de `eye`, `at` e `up`.
+
+A posição vertical da câmera é calculada por `0.1 * Math.sin(this.angle)`, usando o mesmo ângulo da animação da pipa. Como a pipa se desloca com amplitude de `0.2`, a câmera acompanha metade desse movimento. Assim, a pipa continua subindo e descendo na tela, com amplitude de `0.1` no centro do corpo.
+
+Os vetores `eye` e `at` recebem a mesma posição vertical, mantendo a direção da câmera fixa. A câmera fica em `[0, cameraPos, 0]`, olha para `[0, cameraPos, 0.5]` e usa `[0, 1, 0]` como vetor para cima.
+
+Antes de enviar os dados ao shader, a matriz de visão é multiplicada pela matriz de modelagem de cada objeto, na ordem `view * model`. A pipa e as duas fitas usam a mesma câmera, preservando os movimentos relativos da cauda.
+
+### Projeção
+
+A matriz de projeção ortográfica ainda não foi integrada à cena. Por enquanto, o shader recebe o produto das matrizes de visão e modelagem.
+

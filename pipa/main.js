@@ -3,6 +3,7 @@ import fragShaderSrc from './projection.frag.js';
 import WebGPU from '../lib/webgpu.js';
 import { 
     createIdentityMat4, 
+    createLookAtMat4,
     createTranslationMat4, 
     createRotationZMat4, 
     multiplyMat4 
@@ -11,6 +12,7 @@ import {
 class Scene {
     constructor(gpu) {
         this.angle = 0;
+        this.cameraPos = 0;
         this.program = gpu.createProgram(vertShaderSrc, fragShaderSrc);
 
         // Geometria da pipa
@@ -131,25 +133,36 @@ class Scene {
         return multiplyMat4(modelFita1, localFita2);
     }
 
+    createViewMatrix() {
+        this.cameraPos = 0.1 * Math.sin(this.angle);
+
+        const eye = [0, this.cameraPos, 0.0];
+        const at = [0, this.cameraPos, 0.5];
+        const up = [0, 1, 0];
+
+        return createLookAtMat4(eye, at, up);
+    }
+
     draw(gpu) {
         const model = this.createModelMatrix();
+        const view = this.createViewMatrix();
 
         const modelFita1 = this.createModelMatrixFita1(model);
         const modelFita2 = this.createModelMatrixFita2(modelFita1);
 
         
         // Renderiza a Pipa
-        this.uniformPipa.data.set(model);
+        this.uniformPipa.data.set(multiplyMat4(view, model));
         gpu.writeBuffer(this.uniformPipa.buffer, this.uniformPipa.data);
         gpu.draw(this.program, this.pipa, [this.uniformPipa.bindGroup]);
 
         // Renderiza a Fita 1
-        this.uniformFita1.data.set(modelFita1);
+        this.uniformFita1.data.set(multiplyMat4(view, modelFita1));
         gpu.writeBuffer(this.uniformFita1.buffer, this.uniformFita1.data);
         gpu.draw(this.program, this.fita1, [this.uniformFita1.bindGroup]);
 
         // Renderiza a Fita 2
-        this.uniformFita2.data.set(modelFita2);
+        this.uniformFita2.data.set(multiplyMat4(view, modelFita2));
         gpu.writeBuffer(this.uniformFita2.buffer, this.uniformFita2.data);
         gpu.draw(this.program, this.fita2, [this.uniformFita2.bindGroup]);
     }
